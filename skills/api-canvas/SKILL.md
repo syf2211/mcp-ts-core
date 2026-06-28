@@ -4,7 +4,7 @@ description: >
   DataCanvas primitive reference — a Tier 3 SQL/analytical workspace for tabular MCP servers, backed by DuckDB. Use when registering tables from upstream APIs, running ad-hoc SQL across them, and exporting results. Covers the acquire → register → query → export flow, per-table TTL, the token-sharing pattern for multi-agent collaboration, env config, and Cloudflare Workers fail-closed behavior.
 metadata:
   author: cyanheads
-  version: "1.7"
+  version: "1.8"
   audience: external
   type: reference
 ---
@@ -13,7 +13,7 @@ metadata:
 
 `DataCanvas` is a primitive for **storage stashes, canvas computes**. The existing `IStorageProvider` is a key/value abstraction — it can stash blobs but exposes no analytical surface. `DataCanvas` is the analytical surface: register tabular data from upstream APIs, run SQL across multiple registered tables, and export results as CSV/Parquet/JSON.
 
-**Tier 3** — `@duckdb/node-api` is an optional peer dependency (`bun add @duckdb/node-api`). Servers that don't enable canvas pay zero install cost. Lazy-loaded on first use.
+**Tier 3** — `@duckdb/node-api` is an optional capability. The framework declares it as an optional peer dependency, but **canvas-adopting servers must add it as a direct `dependencies` entry** in their own `package.json` at a prerelease-inclusive range that resolves (e.g. `"@duckdb/node-api": "^1.5.4-r.1"` — DuckDB Neo publishes prerelease-tagged versions only). Servers that don't enable canvas pay zero install cost. Lazy-loaded on first use.
 
 **Disabled by default.** Set `CANVAS_PROVIDER_TYPE=duckdb` to enable. Otherwise `core.canvas` is `undefined`.
 
@@ -535,7 +535,7 @@ When the preview budget is small (single-digit rows) and the sniff window matter
 
 ## Checklist
 
-- [ ] `@duckdb/node-api` installed as a peer dependency (`bun add @duckdb/node-api`)
+- [ ] `@duckdb/node-api` declared in **your server's** `package.json` `dependencies` at a prerelease-inclusive range (e.g. `"^1.5.4-r.1"`; `bun add @duckdb/node-api@^1.5.4-r.1`)
 - [ ] `CANVAS_PROVIDER_TYPE=duckdb` set in `.env`
 - [ ] Canvas accessor module created (`src/services/canvas-accessor.ts` or equivalent)
 - [ ] Accessor wired in `setup()` callback via `setCanvas(core.canvas)`
