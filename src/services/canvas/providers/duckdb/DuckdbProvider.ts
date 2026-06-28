@@ -60,7 +60,7 @@ import {
 
 const importDuckDB = lazyImport(
   () => import('@duckdb/node-api'),
-  'Install "@duckdb/node-api" to use the DuckDB canvas provider: bun add @duckdb/node-api',
+  'Install "@duckdb/node-api" in your server package.json dependencies to use the DuckDB canvas provider (e.g. bun add @duckdb/node-api@^1.5.4-r.1)',
 );
 
 type DuckDBModule = typeof import('@duckdb/node-api');
