@@ -1099,15 +1099,48 @@ function buildCreateTableSql(tableName: string, schema: ColumnSchema[]): string 
 function dataTypeToColumnType(dataType: string): ColumnType {
   const upper = dataType.toUpperCase();
   if (upper.startsWith('VARCHAR') || upper === 'STRING' || upper === 'TEXT') return 'VARCHAR';
-  if (upper === 'INTEGER' || upper === 'INT' || upper === 'INT4') return 'INTEGER';
-  if (upper === 'BIGINT' || upper === 'INT8' || upper === 'LONG') return 'BIGINT';
-  if (upper === 'DOUBLE' || upper === 'FLOAT8' || upper === 'REAL' || upper === 'FLOAT')
+  if (
+    upper === 'INTEGER' ||
+    upper === 'INT' ||
+    upper === 'INT4' ||
+    upper === 'SMALLINT' ||
+    upper === 'INT2' ||
+    upper === 'TINYINT' ||
+    upper === 'INT1' ||
+    upper === 'UTINYINT' ||
+    upper === 'USMALLINT' ||
+    upper === 'UINTEGER'
+  ) {
+    return 'INTEGER';
+  }
+  if (
+    upper === 'BIGINT' ||
+    upper === 'INT8' ||
+    upper === 'LONG' ||
+    upper === 'HUGEINT' ||
+    upper === 'UBIGINT'
+  ) {
+    return 'BIGINT';
+  }
+  if (
+    upper === 'DOUBLE' ||
+    upper === 'FLOAT8' ||
+    upper === 'REAL' ||
+    upper === 'FLOAT' ||
+    upper === 'FLOAT4' ||
+    upper.startsWith('DECIMAL') ||
+    upper.startsWith('NUMERIC')
+  ) {
     return 'DOUBLE';
+  }
   if (upper === 'BOOLEAN' || upper === 'BOOL') return 'BOOLEAN';
   if (upper.startsWith('TIMESTAMP')) return 'TIMESTAMP';
   if (upper === 'DATE') return 'DATE';
   if (upper === 'JSON') return 'JSON';
   if (upper === 'BLOB' || upper === 'BYTEA') return 'BLOB';
+  if (upper.endsWith('[]') || upper.startsWith('LIST') || upper.startsWith('STRUCT')) {
+    return 'JSON';
+  }
   return 'VARCHAR';
 }
 

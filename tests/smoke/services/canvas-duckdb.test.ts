@@ -1032,6 +1032,31 @@ describe('canvas · DuckDB round trip', () => {
     expect(byName.get('i')).toBe('BLOB');
   });
 
+  it('describe() maps DuckDB aggregate and extended numeric types from query results', async () => {
+    const instance = await canvas.acquire(undefined, ctx);
+    await instance.registerTable(
+      't',
+      [
+        { year: 2024, v: 1 },
+        { year: 2025, v: 2 },
+      ],
+      {},
+    );
+    await instance.query(
+      `SELECT SUM(CAST(year AS INTEGER)) AS s, CAST(v AS DECIMAL(10,2)) AS d,
+              CAST(1 AS SMALLINT) AS sm, 1.5 AS lit, LIST(v) AS l FROM t GROUP BY v`,
+      { registerAs: 'r' },
+    );
+
+    const [info] = await instance.describe({ tableName: 'r' });
+    const byName = new Map(info!.columns.map((c) => [c.name, c.type]));
+    expect(byName.get('s')).toBe('BIGINT');
+    expect(byName.get('d')).toBe('DOUBLE');
+    expect(byName.get('sm')).toBe('INTEGER');
+    expect(byName.get('lit')).toBe('DOUBLE');
+    expect(byName.get('l')).toBe('JSON');
+  });
+
   it('describe() reports nullable:false for a NOT NULL column, true otherwise', async () => {
     const instance = await canvas.acquire(undefined, ctx);
     await instance.registerTable('nn_table', [{ id: 1, label: 'a' }], {
