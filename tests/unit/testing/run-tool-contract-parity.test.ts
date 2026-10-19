@@ -353,6 +353,26 @@ describe('runToolContract cancellation', () => {
     };
   }
 
+  it('settles a handler that returned after the abort as RequestCancelled', async () => {
+    const definition = tool('parity_return_after_cancel', {
+      description: 'Returns normally even though the request was cancelled.',
+      input: z.object({}),
+      output: z.object({ ok: z.boolean().describe('Always true.') }),
+      handler: () => ({ ok: true }),
+    }) as AnyToolDefinition;
+    const signal = AbortSignal.abort('client disconnected');
+    const helper = await runToolContract(definition, {} as never, { context: { signal } });
+    const production = withoutRequestId(
+      (await createToolHandler(definition, services, notifiers)(
+        {},
+        makeServerContext({ signal }),
+      )) as CallToolResult,
+    );
+
+    expect(envelope(production).code).toBe(JsonRpcErrorCode.RequestCancelled);
+    expect(helper).toEqual(production);
+  });
+
   it.each([
     ['a DOMException AbortError', (c: AbortController) => c.abort(), (s: AbortSignal) => s.reason],
     [

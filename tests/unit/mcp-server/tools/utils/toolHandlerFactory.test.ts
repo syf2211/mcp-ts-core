@@ -4024,7 +4024,7 @@ describe('createToolHandler', () => {
         expect(JSON.stringify(record.extra)).not.toContain('stack');
       });
 
-      it('leaves a handler that completed after the abort a success', async () => {
+      it('classifies a handler that returned after the abort as RequestCancelled', async () => {
         const def = tool('cancelled_success_tool', {
           description: 'Returns normally even though the request was cancelled.',
           input: z.object({}),
@@ -4035,8 +4035,52 @@ describe('createToolHandler', () => {
 
         const result = await handler({}, makeServerContext({ signal: AbortSignal.abort('probe') }));
 
-        expect(result.isError).toBeUndefined();
-        expect((result as CallToolResult).structuredContent).toEqual({ ok: true });
+        expect(envelope(result).code).toBe(JsonRpcErrorCode.RequestCancelled);
+        expect(mockLogger.error).not.toHaveBeenCalled();
+        const logged = mockLogger.info.mock.calls.findLast((call) =>
+          String(call[0]).startsWith('Cancelled tool:cancelled_success_tool'),
+        );
+        expect(logged).toBeDefined();
+        const record = logged?.[1] as { extra: Record<string, unknown> };
+        expect(record.extra.errorCode).toBe(JsonRpcErrorCode.RequestCancelled);
+      });
+
+      it('classifies a degrading fan-out that returns after the abort as RequestCancelled', async () => {
+        const def = tool('cancelled_fanout_tool', {
+          description: 'Degrades a cancelled leg into a partial result.',
+          input: z.object({}),
+          output: z.object({
+            ok: z.array(z.string()),
+            failed: z.array(z.string()),
+          }),
+          handler: async (_input, ctx) => {
+            const legs = await Promise.allSettled([
+              Promise.resolve('a'),
+              new Promise<string>((_, reject) => {
+                if (ctx.signal.aborted) {
+                  reject(ctx.signal.reason ?? new Error('aborted'));
+                  return;
+                }
+                ctx.signal.addEventListener('abort', () =>
+                  reject(ctx.signal.reason ?? new Error('aborted')),
+                );
+              }),
+            ]);
+            return {
+              ok: legs.flatMap((leg) => (leg.status === 'fulfilled' ? [leg.value] : [])),
+              failed: legs.flatMap((leg, index) =>
+                leg.status === 'rejected' ? [`leg${index}`] : [],
+              ),
+            };
+          },
+        });
+        const controller = new AbortController();
+        const handler = createToolHandler(def as AnyToolDefinition, services, notifiers);
+        const run = handler({}, makeServerContext({ signal: controller.signal }));
+        controller.abort('probe');
+        const result = await run;
+
+        expect(envelope(result).code).toBe(JsonRpcErrorCode.RequestCancelled);
       });
 
       it('leaves an input_required signal raised after the abort as control flow', async () => {

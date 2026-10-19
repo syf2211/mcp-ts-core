@@ -28,7 +28,11 @@ import { parseOutputContract } from '@/mcp-server/outputContract.js';
 import type { AnyResourceDefinition } from '@/mcp-server/resources/utils/resourceDefinition.js';
 import { withRequiredScopes } from '@/mcp-server/transports/auth/lib/authUtils.js';
 import { JsonRpcErrorCode, McpError } from '@/types-global/errors.js';
-import { asRequestCancelled, ErrorHandler } from '@/utils/internal/error-handler/errorHandler.js';
+import {
+  asRequestCancelled,
+  ErrorHandler,
+  throwIfRequestCancelledAfterHandler,
+} from '@/utils/internal/error-handler/errorHandler.js';
 import {
   isInstance,
   readWireErrorData,
@@ -180,6 +184,7 @@ export function createResourceHandler(
           try {
             // Handler may return sync or async.
             const handlerResult = await def.handler(validatedParams, ctx);
+            throwIfRequestCancelledAfterHandler(request.signal);
 
             // The domain value is what `mcp.resource.output_bytes` measures — not
             // the assembled `contents` this callback returns.

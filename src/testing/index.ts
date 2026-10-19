@@ -55,7 +55,10 @@ import {
   type InMemoryProviderOptions,
 } from '@/storage/providers/inMemory/inMemoryProvider.js';
 import type { ErrorContract } from '@/types-global/errors.js';
-import { asRequestCancelled } from '@/utils/internal/error-handler/errorHandler.js';
+import {
+  asRequestCancelled,
+  throwIfRequestCancelledAfterHandler,
+} from '@/utils/internal/error-handler/errorHandler.js';
 
 // ---------------------------------------------------------------------------
 // Options
@@ -567,8 +570,9 @@ export interface RunToolContractOptions {
  * `InternalError` (`-32603`) naming that contract.
  *
  * A cancellation settles as it does in production: once `context.signal` has
- * fired, anything the handler or the success pipeline after it throws
- * (output validation, `format()`, enrichment) becomes `RequestCancelled`
+ * fired, anything the handler returns or throws, and anything the success
+ * pipeline after it throws (output validation, `format()`, enrichment),
+ * becomes `RequestCancelled`
  * (`-32011`), whatever its own shape. Argument parsing stays outside that
  * settle, so schema-invalid arguments on an aborted signal still return
  * `InvalidParams`.
@@ -592,6 +596,7 @@ export async function runToolContract<TDefinition extends AnyToolDefinition>(
 
   try {
     const output = await definition.handler(validatedInput, ctx);
+    throwIfRequestCancelledAfterHandler(ctx.signal);
     const validatedOutput = parseToolOutput(definition, output);
     return buildToolSuccessResult(
       definition,

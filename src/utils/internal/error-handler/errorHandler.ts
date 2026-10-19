@@ -136,6 +136,19 @@ export function asRequestCancelled(error: unknown, signal: AbortSignal): unknown
 }
 
 /**
+ * After a handler returns, a settled abort signal means the client will not
+ * read a success envelope — classify the call as cancelled before output
+ * parsing or telemetry records a success (#753).
+ */
+export function throwIfRequestCancelledAfterHandler(signal: AbortSignal): void {
+  if (!signal.aborted) return;
+  throw asRequestCancelled(
+    signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'),
+    signal,
+  );
+}
+
+/**
  * A utility class providing static methods for comprehensive error handling.
  */
 // biome-ignore lint/complexity/noStaticOnlyClass: public API surface — preserving class for namespace semantics

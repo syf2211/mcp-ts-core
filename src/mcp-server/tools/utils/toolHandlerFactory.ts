@@ -34,7 +34,11 @@ import {
   McpError,
 } from '@/types-global/errors.js';
 import { resolvePartialResultKeys } from '@/utils/formatting/partialResult.js';
-import { asRequestCancelled, ErrorHandler } from '@/utils/internal/error-handler/errorHandler.js';
+import {
+  asRequestCancelled,
+  ErrorHandler,
+  throwIfRequestCancelledAfterHandler,
+} from '@/utils/internal/error-handler/errorHandler.js';
 import { isInstance, readErrorData } from '@/utils/internal/error-handler/helpers.js';
 import { measureToolExecution, recordToolRejection } from '@/utils/internal/performance.js';
 import {
@@ -191,6 +195,7 @@ export function createToolHandler(
           try {
             // Handler may return sync or async.
             const handlerResult = await def.handler(validatedInput, handlerCtx);
+            throwIfRequestCancelledAfterHandler(request.signal);
 
             // The domain value is what `mcp.tool.output_bytes` and
             // partial-success detection measure — not the assembled result this

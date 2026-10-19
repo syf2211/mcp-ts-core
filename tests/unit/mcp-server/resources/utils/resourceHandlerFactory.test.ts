@@ -1452,6 +1452,31 @@ describe('createResourceHandler', () => {
         isSuccess: false,
       });
     });
+
+    it('classifies a handler that returned after the abort as RequestCancelled', async () => {
+      const def = resource('cancelled://return', {
+        description: 'Returns normally even though the request was cancelled.',
+        output: z.object({ value: z.number().describe('A number.') }),
+        handler: () => ({ value: 1 }),
+      });
+      const handler = createResourceHandler(def as AnyResourceDefinition, services, notifiers);
+
+      const rejection = await handler(
+        new URL('cancelled://return'),
+        {},
+        makeServerContext({ signal: AbortSignal.abort('probe') }),
+      ).then(
+        () => undefined,
+        (err: unknown) => err,
+      );
+
+      expect(rejection).toBeInstanceOf(McpError);
+      expect((rejection as McpError).code).toBe(JsonRpcErrorCode.RequestCancelled);
+      expect(completionMetrics()).toMatchObject({
+        errorCode: String(JsonRpcErrorCode.RequestCancelled),
+        isSuccess: false,
+      });
+    });
   });
 
   // -----------------------------------------------------------------------
